@@ -34,7 +34,7 @@ A basic command line password manager using AES encryption and Argon2 and saltin
  - Create a way to send hardlock to other instances of hardlocks
 
 ## Disclaimer
- This program is not perfect, But is did try my best to make it as secure as possible for actual use. You should probably use something like XKeypass as a password manager instead. This program does encrypt the data that you store into it when closed properly. Also i am not liable if your data gets stole if you are using this password manager.
+ This program is not perfect, But is did try my best to make it as secure as possible for actual use. You should probably use something like XKeypass as a password manager instead. This program does for the most part encrypt your data and protect from deletion by requiring sudo permissions to view. 
 
 
 
