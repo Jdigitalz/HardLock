@@ -81,7 +81,6 @@ def center_input(prompt: str = "❯ "):
 
 
 def banner():
-    print(manager_path)
     text1 = Text(r"                      _   __            _    ")
     text2 = Text(r"   /\  /\__ _ _ __ __| | / /  ___   ___| | __")
     text3 = Text(r"  / /_/ / _` | '__/ _` |/ /  / _ \ / __| |/ /")
