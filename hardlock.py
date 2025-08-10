@@ -2,7 +2,10 @@ import os
 import sys
 import ast
 import time
+import ctypes
 import shutil
+import getpass
+import subprocess
 from rich.text import Text
 from rich.align import Align
 from rich.table import Table
@@ -11,15 +14,49 @@ from protect import encrypt_string, decrypt_string
 
 
 console = Console()
-user = os.getuid()
+platform = sys.platform
 os.chdir(os.path.dirname(sys.executable))
 
-if user != 0:
-    console.print("[yellow]Please start the program with sudo[/yellow]")
-    sys.exit()
+if platform == "linux":
+    try:
+        user = os.getuid()
+        if user != 0:
+            console.print(
+                "[yellow]Please start the program with sudo[/yellow]")
+            sys.exit()
+    except Exception:
+        pass
+elif platform == "win32":
+    try:
+        if ctypes.windll.shell32.IsUserAnAdmin() != 1:
+            console.print(
+                "[yellow]Please start this program with administrator[/yellow]")
+            sys.exit()
+    except Exception:
+        pass
 
 base_dir = os.path.dirname(sys.argv[0])
 manager_path = os.path.join(base_dir, ".managervault")
+
+
+def secure_vault(vault_path):
+    if not os.path.exists(vault_path):
+        with open(vault_path, "wb") as f:
+            f.write(b"")
+    username = getpass.getuser()
+    user_domain = os.environ.get("USERDOMAIN")
+    if user_domain and user_domain.upper() != os.environ.get("COMPUTERNAME", "").upper():
+        user_spec = f"{user_domain}\\{username}"
+    else:
+        user_spec = username
+    subprocess.run([
+        "icacls", vault_path,
+        "/inheritance:r",
+        "/grant:r",
+        f"Administrators:F",
+        f"{user_spec}:F",
+        "/c"
+    ], check=True, shell=False)
 
 
 def lock_file(password):
@@ -174,9 +211,13 @@ def manager_add():
             center_print("[green]Hardlock database has been created!![/green]")
             center_print("[green]Relogin with newly created password[/green]")
             lock_file(new_master)
-            os.system(f"sudo chown root:root {manager_path}")
-            os.system(f"sudo chmod 600 {manager_path}")
-            sys.exit()
+            if platform == "linux":
+                os.system(f"sudo chown root:root {manager_path}")
+                os.system(f"sudo chmod 600 {manager_path}")
+                sys.exit()
+            elif platform == "win32":
+                secure_vault(".managervault")
+                sys.exit()
         else:
             if bool(manager) is False:
                 new_index = 1
@@ -423,3 +464,4 @@ if __name__ == "__main__":
         lock_file(master_password)
     except NameError:
         sys.exit()
+
