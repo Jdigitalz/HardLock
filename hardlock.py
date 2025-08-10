@@ -1,3 +1,4 @@
+
 import os
 import sys
 import ast
@@ -15,27 +16,15 @@ from protect import encrypt_string, decrypt_string
 
 console = Console()
 platform = sys.platform
-os.chdir(os.path.dirname(sys.executable))
 
-if platform == "linux":
-    try:
-        user = os.getuid()
-        if user != 0:
-            console.print(
-                "[yellow]Please start the program with sudo[/yellow]")
-            sys.exit()
-    except Exception:
-        pass
-elif platform == "win32":
-    try:
-        if ctypes.windll.shell32.IsUserAnAdmin() != 1:
-            console.print(
-                "[yellow]Please start this program with administrator[/yellow]")
-            sys.exit()
-    except Exception:
-        pass
+# Set base_dir based on platform for storing .managervault
+if platform == "win32":
+    base_dir = os.path.join(os.environ["APPDATA"], "Hardlock")
+    os.makedirs(base_dir, exist_ok=True)
+else:
+    base_dir = os.path.dirname(sys.executable)
+os.chdir(base_dir)
 
-base_dir = os.path.dirname(sys.argv[0])
 manager_path = os.path.join(base_dir, ".managervault")
 
 
@@ -46,7 +35,7 @@ def secure_vault(vault_path):
     username = getpass.getuser()
     user_domain = os.environ.get("USERDOMAIN")
     if user_domain and user_domain.upper() != os.environ.get("COMPUTERNAME", "").upper():
-        user_spec = f"{user_domain}\\{username}"
+        user_spec = f"{user_domain}\{username}"
     else:
         user_spec = username
     subprocess.run([
@@ -92,6 +81,7 @@ def center_input(prompt: str = "❯ "):
 
 
 def banner():
+    print(manager_path)
     text1 = Text(r"                      _   __            _    ")
     text2 = Text(r"   /\  /\__ _ _ __ __| | / /  ___   ___| | __")
     text3 = Text(r"  / /_/ / _` | '__/ _` |/ /  / _ \ / __| |/ /")
@@ -105,26 +95,24 @@ def banner():
     console.print(Align(text5, align="center"))
     console.print(Align(text6, align="center"))
 
-# except cryptography.exceptions.InvalidTag:
-
 
 def check_empty():
     if os.path.exists(manager_path):
         with open(manager_path, "r") as file:
             contents = file.read()
             if len(contents.strip()) == 0:
-                return "EMPTY MANAGER"
+                return "EMPTY_MANAGER"
     else:
         with open(manager_path, "w") as file:
             pass
-        return "EMPTY MANAGER"
+        return "EMPTY_MANAGER"
 
 
 def lock_screen():
     global master_password
     print("\033c")
     output = check_empty()
-    if output == "EMPTY MANAGER":
+    if output == "EMPTY_MANAGER":
         return
     banner()
     center_print(
@@ -174,7 +162,7 @@ def manager_add():
     try:
         print("0\33c")
         banner()
-        if check == "EMPTY MANAGER":
+        if check == "EMPTY_MANAGER":
             center_print(
                 "[green]Hardlock Vault has not been created yet...[/green]")
             center_print("[green]Add a entry to create a vault![/green]")
@@ -196,7 +184,7 @@ def manager_add():
                 "[yellow]Nothing to add returning to main menu...[/yellow]")
             time.sleep(2)
             raise KeyboardInterrupt
-        if check == "EMPTY MANAGER":
+        if check == "EMPTY_MANAGER":
             starting_index = 1
             full_entry = {starting_index: (add_user, add_pwd)}
             with open(manager_path, "w") as file:
@@ -216,7 +204,7 @@ def manager_add():
                 os.system(f"sudo chmod 600 {manager_path}")
                 sys.exit()
             elif platform == "win32":
-                secure_vault(".managervault")
+                secure_vault(manager_path)
                 sys.exit()
         else:
             if bool(manager) is False:
@@ -236,7 +224,7 @@ def manager_add():
 def manager_remove():
     coloums = shutil.get_terminal_size().columns
     try:
-        if check == "EMPTY MANAGER" or bool(manager) is False:
+        if check == "EMPTY_MANAGER" or bool(manager) is False:
             center_print("[yellow]No entries to remove[/yellow]")
             time.sleep(1)
             return
@@ -254,11 +242,9 @@ def manager_remove():
                     center_print(
                         f"row number {number_index} contains: [bold]----------  {pwd}[/bold]")
                 elif pwd == "BLANKPASSWORDENTRY":
-                    center_print(f"row number {number_index} contains: [bold]{
-                                 usr}  ----------[/bold]")
+                    center_print(f"row number {number_index} contains: [bold]{usr}  ----------[/bold]")
                 else:
-                    center_print(f"row number {number_index} contains: [bold]{
-                                 usr}  {pwd}[/bold]")
+                    center_print(f"row number {number_index} contains: [bold]{usr}  {pwd}[/bold]")
                 center_print("are you sure you want to delete? y/n")
                 while True:
                     sure = center_input().lower()
@@ -282,8 +268,7 @@ def manager_remove():
                         file.write(str(new_manager))
                 return
             else:
-                center_print(f"[yellow]Not a valid row number '{
-                             number_index}' [/yellow]")
+                center_print(f"[yellow]Not a valid row number '{number_index}' [/yellow]")
     except KeyboardInterrupt:
         print("\033c")
         return
@@ -293,7 +278,7 @@ def manager_edit():
     global check
     coloums = shutil.get_terminal_size().columns
     check = check_empty()
-    if check == "EMPTY MANAGER" or bool(manager) is False:
+    if check == "EMPTY_MANAGER" or bool(manager) is False:
         center_print("[yellow]No entries to edit[/yellow]")
         time.sleep(1)
         return
@@ -309,8 +294,7 @@ def manager_edit():
             if index in manager_keys:
                 break
             else:
-                center_print(f"[yellow]Not a valid row index '{
-                             index}'[/yellow]")
+                center_print(f"[yellow]Not a valid row index '{index}'[/yellow]")
                 continue
         cuser, cpass = manager[index]
         center_print(
@@ -362,7 +346,7 @@ def manager_edit():
 
 
 def change_manager_password():
-    if check == "EMPTY MANAGER" or bool(manager) is False:
+    if check == "EMPTY_MANAGER" or bool(manager) is False:
         center_print(
             "[yellow]Hardlock is empty no current password required[/yellow]")
         time.sleep(1)
@@ -415,7 +399,7 @@ def editor_logic():
     check = check_empty()
     while True:
         banner()
-        if check == "EMPTY MANAGER":
+        if check == "EMPTY_MANAGER":
             center_print(
                 "[green]No entries are in Hardlock, Add some![/green]")
         else:
@@ -464,4 +448,3 @@ if __name__ == "__main__":
         lock_file(master_password)
     except NameError:
         sys.exit()
-
